@@ -1,0 +1,19 @@
+name: cagean
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pytorch=2.12.1
+  - pytorch-cuda=12.4
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - tqdm
+  - biopython
+  - pip
+  - pip:
+    - pybedtools
+    - pyBigWig
