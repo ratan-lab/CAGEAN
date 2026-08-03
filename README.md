@@ -270,9 +270,3 @@ not a valid seq-only baseline. The proper seq-only baseline is the matched
 ## Citation
 
 [pending]
-
----
-
-## License
-
-[pending]
