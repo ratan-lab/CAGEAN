@@ -11,8 +11,8 @@ source("figures/utils.R")
 strata <- tribble(
   ~stratum,   ~n,       ~pos_pct,
   "Promoter",  58938,    40.8,
-  "Enhancer",  54300,     7.9,
-  "Inactive", 234764,     2.7
+  "Enhancer",   5802,    25.6,
+  "Inactive", 283262,     3.2
 ) |>
   mutate(
     stratum = factor(stratum, levels = c("Promoter", "Enhancer", "Inactive")),
@@ -30,8 +30,8 @@ p_a <- ggplot(strata, aes(x = stratum, y = pos_pct, fill = stratum)) +
     name   = NULL,
     labels = c(
       "Promoter" = "Promoter\n(n=58,938)",
-      "Enhancer" = "Enhancer\n(n=54,300)",
-      "Inactive" = "Inactive\n(n=234,764)"
+      "Enhancer" = "Enhancer\n(n=5,802)",
+      "Inactive" = "Inactive\n(n=283,262)"
     )
   ) +
   theme_nar() +
@@ -52,9 +52,9 @@ t4 <- tribble(
   "Promoter",   "H3K4me3",  0.869,   0.766,
   "Promoter",   "H3K27ac",  0.823,   0.766,
   "Promoter",   "ATAC",     0.783,   0.766,
-  "Enhancer",   "H3K4me3",  0.437,   0.371,
-  "Enhancer",   "H3K27ac",  0.376,   0.371,
-  "Enhancer",   "ATAC",     0.363,   0.371,
+  "Enhancer",   "H3K4me3",  0.686,   0.631,
+  "Enhancer",   "H3K27ac",  0.659,   0.631,
+  "Enhancer",   "ATAC",     0.612,   0.631,
 ) |>
   mutate(
     stratum = factor(stratum, levels = c("All sites", "Promoter", "Enhancer")),
@@ -92,9 +92,9 @@ t5 <- tribble(
   "HEK293T",  "Promoter", "H3K4me3",  0.869,
   "HEK293T",  "Promoter", "H3K27ac",  0.823,
   "HEK293T",  "Promoter", "ATAC",     0.783,
-  "HEK293T",  "Enhancer", "H3K4me3",  0.437,
-  "HEK293T",  "Enhancer", "H3K27ac",  0.376,
-  "HEK293T",  "Enhancer", "ATAC",     0.363,
+  "HEK293T",  "Enhancer", "H3K4me3",  0.686,
+  "HEK293T",  "Enhancer", "H3K27ac",  0.659,
+  "HEK293T",  "Enhancer", "ATAC",     0.612,
   "H9 ESC",   "Promoter", "H3K4me3",  0.114,
   "H9 ESC",   "Promoter", "H3K27ac",  0.183,
   "H9 ESC",   "Promoter", "ATAC",     0.125,

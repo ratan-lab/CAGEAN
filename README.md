@@ -244,26 +244,20 @@ trivial; instead, `eval_h9esc.py` uses the epigenomic coverage mask
 of G4 status. Both filters exclude constitutively inactive regions not represented in
 the training distribution.
 
-**Enhancer threshold calculation (eval_stratified.py).** The enhancer-like stratum uses
-Q75 of *per-site mean* H3K27ac signal among non-zero sites. The correct order is:
-
-```python
-epi_mean = epi_h3k27ac.mean(axis=1)   # per-site mean — FIRST
-epi_nz   = epi_mean[epi_mean > 0]
-thresh   = np.percentile(epi_nz, 75)  # ≈ 0.00121 for HEK293T T+NZ
-```
-
-Computing the percentile on the raw 2D array before averaging inflates the threshold
-by ~13% and silently misclassifies ~17 k sites into the inactive stratum.
+**Enhancer threshold (eval_stratified.py).** Enhancer-like sites are defined as PQS
+sites where the per-site mean H3K27ac signal exceeds `Q75_H3K27AC = 0.00286` — the
+75th percentile of non-zero per-site means across the full A549 PQS set. This value
+is hardcoded in `eval_stratified.py` and applied uniformly across all evaluation cell
+types so that strata are defined on a consistent scale. If you apply this script to a
+different training cell type, override it with `--q75_h3k27ac <value>`.
 
 **epiG4NN baseline.** Tables 1–2 include results from the original epiG4NN [CITATION]
-TF implementation retrained on our A549 data. We deliberately used the original TF
-codebase to avoid attributing performance differences to reimplementation. Evaluation
-requires `conda activate cagean_tf` and a TF SavedModel checkpoint (Zenodo archive).
-If the TF models were retrained on z-normalized epigenomic input (produced by
-`data_prep/04_normalize.py`), pass `--norm_params data/norm_params_{mark}.json` to
-`eval_tf_baseline.py`; if retrained on the same 0–1 range-normalized arrays as CAGEAN,
-no additional normalization is needed.
+TF implementation retrained on our A549 data. We used the original TF codebase
+deliberately to ensure that performance differences reflect architecture, not
+reimplementation choices. Evaluation requires `conda activate cagean_tf` and the
+`tf_epig4nn_{mark}/` SavedModel checkpoints from the Zenodo archive. The Zenodo
+checkpoints were trained on the same 0–1 range-normalized arrays as CAGEAN; no
+additional normalization step is needed.
 
 **Zero-epi ablation (Supp Table S5).** `eval_zeroepi.py` zeroes the epigenomic input
 to a trained CAGEAN at inference time. This is an out-of-distribution input (the model

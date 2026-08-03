@@ -2,7 +2,7 @@
 Stratified AUPRC on HEK293T cross-cell T+NZ (Table 4).
 
 Partitions test sites into promoter (±2 kb of any TSS), enhancer-like
-(per-site mean H3K27ac > Q75 of non-zero per-site means), and inactive.
+(per-site mean H3K27ac > Q75_H3K27AC), and inactive.
 Promoter takes priority over enhancer when both conditions are met.
 
 Usage:
@@ -14,11 +14,10 @@ Usage:
       --pqs_bed      pqs/PQS_padded.bed \\
       --tss_bed      data/tss_2kb_hg19.bed
 
-CRITICAL: Enhancer threshold is computed from per-site mean H3K27ac signal
-(epi.mean(axis=1)), not from the raw 2D array. Computing the percentile on
-the raw array before mean-pooling inflates the threshold by ~13% and
-misclassifies ~17k sites.  Unit test: threshold should be ≈0.00121 for
-HEK293T T+NZ.
+Enhancer threshold: Q75_H3K27AC = 0.00286 (75th percentile of non-zero per-site
+mean H3K27ac across the full A549 PQS set). Applied uniformly to all evaluation
+cell types so that strata are defined on a consistent scale. Override with
+--q75_h3k27ac if applying to a different training cell type.
 """
 import os
 import sys
@@ -31,9 +30,10 @@ from sklearn.metrics import average_precision_score
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.cagean import CAGEAN
 
-TEST_CHROMS = ["chr1", "chr3", "chr5", "chr7", "chr9"]
-Q_HEK       = 0.03790
-MARKS       = ["h3k4me3", "h3k27ac", "atac"]
+TEST_CHROMS    = ["chr1", "chr3", "chr5", "chr7", "chr9"]
+Q_HEK          = 0.03790
+Q75_H3K27AC    = 0.00286   # A549 full-PQS non-zero Q75; applied uniformly to all cell types
+MARKS          = ["h3k4me3", "h3k27ac", "atac"]
 
 
 def infer(model, seqs, epi, device, batch=512):
@@ -77,7 +77,9 @@ def main():
     p.add_argument("--pqs_bed",       required=True)
     p.add_argument("--tss_bed",       required=True,
                    help="TSS ±2 kb BED (hg19); create with data_prep/01_scan_pqs.py steps")
-    p.add_argument("--q_hek",         default=Q_HEK, type=float)
+    p.add_argument("--q_hek",         default=Q_HEK,       type=float)
+    p.add_argument("--q75_h3k27ac",   default=Q75_H3K27AC, type=float,
+                   help="A549-derived Q75 H3K27ac threshold for enhancer stratum")
     p.add_argument("--batch",         default=512,   type=int)
     args = p.parse_args()
 
@@ -104,12 +106,11 @@ def main():
     pqs_tnz  = [p for p, m in zip(pqs_ids, tnz_mask) if m]
     seqs_tnz = np.load(os.path.join(args.crosscell_dir, "HEK293T_seqs.npy"))[tnz_mask]
 
-    # Enhancer threshold from per-site mean H3K27ac (MUST be mean before percentile)
+    # Enhancer threshold: fixed A549-derived value, not recomputed per eval cell
     epi_h3k27ac      = np.load(os.path.join(args.crosscell_dir, "HEK293T_h3k27ac_epi.npy"))[tnz_mask]
     epi_mean_h3k27ac = epi_h3k27ac.mean(axis=1)   # (N,) per-site means — compute FIRST
-    epi_nz           = epi_mean_h3k27ac[epi_mean_h3k27ac > 0]
-    thresh           = float(np.percentile(epi_nz, 75)) if len(epi_nz) > 0 else 0.0
-    print(f"  H3K27ac Q75 of per-site means: {thresh:.5f}  (expected ≈0.00121)")
+    thresh           = args.q75_h3k27ac
+    print(f"  H3K27ac enhancer threshold (A549-derived Q75): {thresh:.5f}")
     del epi_h3k27ac
 
     # Category assignment: 0=promoter, 1=enhancer, 2=inactive
