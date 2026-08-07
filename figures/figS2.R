@@ -9,8 +9,8 @@
 library(ggrepel)
 source("figures/utils.R")
 
-# Seq-only Transformer K562 cross-technique AUPRC (Table 2)
-SEQ_TRANSFORMER_K562 <- 0.397
+# Seq-only Transformer K562 cross-technique AUPRC (Table 2; corrected from bootstrap)
+SEQ_TRANSFORMER_K562 <- 0.292
 
 dat <- tribble(
   ~mark,       ~group,             ~same_cell, ~k562_cross,
@@ -42,7 +42,7 @@ p <- ggplot(dat, aes(x = same_cell, y = k562_cross,
   # Seq-only Transformer reference line
   geom_hline(yintercept = SEQ_TRANSFORMER_K562,
              linetype = "dashed", linewidth = 0.4, color = unname(OI["sky"])) +
-  annotate("text", x = 0.905, y = SEQ_TRANSFORMER_K562 + 0.006,
+  annotate("text", x = 0.905, y = SEQ_TRANSFORMER_K562 - 0.004,
            label = "Seq-only Transformer", hjust = 1,
            size = 2.8, color = unname(OI["sky"])) +
   geom_point(size = 2.0) +
@@ -64,8 +64,9 @@ p <- ggplot(dat, aes(x = same_cell, y = k562_cross,
   ) +
   scale_y_continuous(
     name   = "K562 BG4 cross-technique AUPRC (T+NZ)",
-    limits = c(0.285, 0.415),
-    breaks = c(0.29, 0.32, 0.35, 0.38, 0.397, 0.41)
+    limits = c(0.278, 0.340),
+    breaks = seq(0.28, 0.34, 0.02),
+    expand = expansion(mult = c(0.04, 0.04))
   ) +
   theme_nar() +
   theme(

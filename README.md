@@ -14,10 +14,13 @@ Paper: [citation pending]
 ## Repository layout
 
 ```
-models/             Core PyTorch architecture files
+models/
+  cagean.py               CAGEAN architecture (cross-attention fusion)
+  seqonly_transformer.py  Sequence-only Transformer baseline
+  concat_fusion.py        Concatenation-fusion ablation (Table S12)
 data_prep/          Scripts 01–04: raw data → model-ready numpy arrays
 train/              Training scripts and SLURM submission files
-eval/               One evaluation script per paper table
+eval/               One evaluation script per paper table/supplementary table
 analysis/           Attention extraction and figure data generation
 figures/            R scripts and CSV data for each manuscript figure
 environment.yml     PyTorch environment (all training and eval)
@@ -66,14 +69,15 @@ exact commands to run.
 ```
 zenodo/
 ├── checkpoints/
-│   ├── cagean_{h3k4me3,h3k27ac,atac}.pt     # CAGEAN A549 single-cell (exp27)
-│   ├── multicell_cagean_{mark}.pt            # CAGEAN multi-cell (exp28)
-│   ├── seqonly_transformer.pt                # Seq-only Transformer A549 (exp29)
-│   ├── bg4_seqonly_transformer.pt            # K562 BG4 seq-only (exp30)
-│   ├── bg4_cagean_{mark}.pt                  # K562 BG4 CAGEAN (exp31a-c)
-│   ├── tf_epig4nn_{mark}/                    # epiG4NN TF checkpoints
-│   ├── tf_epig4nn_seqonly/                   # epiG4NN TF seq-only (optional; for Δarch row)
-│   └── norm_params_{mark}.json               # z-norm stats (epiG4NN only, if applicable)
+│   ├── cagean_{h3k4me3,h3k27ac,atac}.pt       # CAGEAN A549 single-cell
+│   ├── concat_fusion_{h3k4me3,h3k27ac,atac}.pt # Concatenation-fusion ablation (Table S12)
+│   ├── multicell_cagean_{mark}.pt              # CAGEAN multi-cell (Tables 5–6)
+│   ├── seqonly_transformer.pt                  # Seq-only Transformer A549 (Tables 1–2)
+│   ├── bg4_seqonly_transformer.pt              # K562 BG4 seq-only (Table 3)
+│   ├── bg4_cagean_{mark}.pt                    # K562 BG4 CAGEAN (Table 3)
+│   ├── tf_epig4nn_{mark}/                      # epiG4NN TF checkpoints (Tables 1–2)
+│   ├── tf_epig4nn_seqonly/                     # epiG4NN TF seq-only (optional; Δarch row)
+│   └── norm_params_{mark}.json                 # z-norm stats (epiG4NN only, if applicable)
 ├── data/
 │   ├── a549/{train,test}/                    # {chrom}_seqs.npy, _epi_{mark}.npy, _labels.npy
 │   ├── crosscell/
@@ -219,16 +223,24 @@ After running `analysis/extract_attention.py` to generate numpy attention arrays
 `analysis/plot_attention.py` to convert them to `figures/data/fig4*.csv`:
 
 ```r
-# In R (figures/ directory):
-source("utils.R")
-source("fig1.R")
-source("fig2.R")
-# etc.
+# From the project root:
+Rscript figures/fig1.R
+Rscript figures/fig2.R
+Rscript figures/fig3.R
+Rscript figures/fig4.R
+Rscript figures/fig5.R
+Rscript figures/figS1.R
+Rscript figures/figS2.R
+Rscript figures/figS3.R   # concatenation-fusion ablation (Supp. Fig. S3)
 ```
 
 `utils.R` provides the shared theme (`theme_nar()`), colorblind-safe palettes
 (Okabe-Ito), and `save_fig()` for 600 dpi TIFF + PDF output. All data is read from
 `figures/data/*.csv`; no external file paths are needed.
+
+`figures/data/fig4c.csv` carries attention row-entropy data for three epigenomic marks
+across four G4-positive site groups; it is read by `fig3.R` (the `4c` prefix is a
+historical artifact from an earlier panel numbering and does not indicate Figure 4).
 
 ---
 

@@ -110,6 +110,21 @@ python eval/eval_strict_cts.py \
     --crosscell_dir ${DATA}/crosscell/hek293t \
     --pqs_bed       ${PQS}
 
+# ── Supp Table S12: concatenation-fusion ablation vs CAGEAN ─────────────────
+echo ""
+echo "=== Supp Table S12 (concatenation-fusion ablation) ==="
+python eval/eval_ablation.py \
+    --ckpt_cagean_h3k4me3   ${CKPT}/cagean_h3k4me3.pt \
+    --ckpt_cagean_h3k27ac   ${CKPT}/cagean_h3k27ac.pt \
+    --ckpt_cagean_atac      ${CKPT}/cagean_atac.pt \
+    --ckpt_ablation_h3k4me3 ${CKPT}/concat_fusion_h3k4me3.pt \
+    --ckpt_ablation_h3k27ac ${CKPT}/concat_fusion_h3k27ac.pt \
+    --ckpt_ablation_atac    ${CKPT}/concat_fusion_atac.pt \
+    --a549_dir              ${DATA}/a549/test \
+    --crosscell_dir         ${DATA}/crosscell \
+    --pqs_bed               ${PQS}
+# Add --h1975_dir ${DATA}/crosscell/h1975 --q_h1975 0.07343 if H1975 arrays are available
+
 # ── Tables 1 & 2 epiG4NN columns (requires cagean_tf environment) ────────────
 echo ""
 echo "=== epiG4NN TF baseline (Tables 1 & 2) ==="

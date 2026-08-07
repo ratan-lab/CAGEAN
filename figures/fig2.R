@@ -15,14 +15,14 @@ t2 <- tribble(
   "HEK293T\ncross-cell",      "H3K4me3",  0.548,    0.627,            0.726,
   "HEK293T\ncross-cell",      "H3K27ac",  0.548,    0.627,            0.665,
   "HEK293T\ncross-cell",      "ATAC",     0.548,    0.627,            0.633,
-  "H1975\ncross-cell",        "H3K27ac",  0.567,    0.591,            0.616,
-  "H1975\ncross-cell",        "ATAC",     0.567,    0.591,            0.624,
-  "K562 BG4\n(A549-trained)", "H3K4me3",  0.286,    0.397,            0.310,
-  "K562 BG4\n(A549-trained)", "H3K27ac",  0.286,    0.397,            0.318,
-  "K562 BG4\n(A549-trained)", "ATAC",     0.286,    0.397,            0.294,
-  "U2OS BG4\n(A549-trained)", "H3K4me3",  0.145,    0.146,            0.119,
-  "U2OS BG4\n(A549-trained)", "H3K27ac",  0.145,    0.146,            0.128,
-  "U2OS BG4\n(A549-trained)", "ATAC",     0.145,    0.146,            0.125,
+  "H1975\ncross-cell",        "H3K27ac",  0.520,    0.591,            0.616,
+  "H1975\ncross-cell",        "ATAC",     0.520,    0.591,            0.624,
+  "K562 BG4\n(A549-trained)", "H3K4me3",  0.286,    0.292,            0.310,
+  "K562 BG4\n(A549-trained)", "H3K27ac",  0.286,    0.292,            0.318,
+  "K562 BG4\n(A549-trained)", "ATAC",     0.286,    0.292,            0.294,
+  "U2OS BG4\n(A549-trained)", "H3K4me3",  0.113,    0.146,            0.119,
+  "U2OS BG4\n(A549-trained)", "H3K27ac",  0.113,    0.146,            0.128,
+  "U2OS BG4\n(A549-trained)", "ATAC",     0.113,    0.146,            0.125,
 ) |>
   mutate(
     dataset = factor(dataset, levels = unique(dataset)),
@@ -67,11 +67,11 @@ p_a <- ggplot(t2_long, aes(x = mark, y = auprc, fill = model)) +
 # ── Panel B: K562 BG4 same-cell AUPRC ───────────────────────────────────────
 
 t3 <- tribble(
-  ~model,                ~mark,    ~auprc, ~d_epi,
-  "Seq-only Transformer", NA_character_, 0.337, NA_real_,
-  "CAGEAN",              "H3K4me3",     0.427,  +0.090,
-  "CAGEAN",              "H3K27ac",     0.434,  +0.097,
-  "CAGEAN",              "ATAC",        0.492,  +0.155,
+  ~model,                ~mark,         ~auprc, ~d_epi,   ~ci_lo,  ~ci_hi,
+  "Seq-only Transformer", NA_character_, 0.337,  NA_real_, NA_real_, NA_real_,
+  "CAGEAN",              "H3K4me3",     0.427,  +0.090,  +0.086,  +0.093,
+  "CAGEAN",              "H3K27ac",     0.434,  +0.097,  +0.093,  +0.101,
+  "CAGEAN",              "ATAC",        0.492,  +0.155,  +0.151,  +0.158,
 ) |>
   mutate(
     x_label = if_else(is.na(mark), "Seq-only\nTransformer", paste0("CAGEAN\n", mark)),
@@ -92,12 +92,13 @@ p_b <- ggplot(t3, aes(x = x_label, y = auprc, fill = fill_col)) +
   geom_col(width = 0.65, color = "grey20", linewidth = 0.25) +
   geom_text(
     data = filter(t3, !is.na(d_epi)),
-    aes(y = auprc + 0.03, label = sprintf("+%.3f", d_epi)),
-    size = 2.8, color = "grey20"
+    aes(y = auprc + 0.018,
+        label = sprintf("%+.3f\n[%+.3f, %+.3f]", d_epi, ci_lo, ci_hi)),
+    size = 2.3, color = "grey20", lineheight = 1.0
   ) +
   scale_fill_manual(values = bar_colors_2b, name = NULL) +
   scale_y_continuous(name = "AUPRC (K562 BG4 same-cell)",
-                     limits = c(0, 0.58), breaks = seq(0, 0.5, 0.1),
+                     limits = c(0, 0.63), breaks = seq(0, 0.6, 0.1),
                      expand = expansion(mult = c(0, 0.02))) +
   scale_x_discrete(name = NULL) +
   theme_nar() +

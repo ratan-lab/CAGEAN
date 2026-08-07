@@ -124,41 +124,38 @@ p_c <- ggplot(t5, aes(x = cell_type, y = auprc,
   theme(legend.position = "bottom") +
   labs(tag = "C")
 
-# ── Panel D: multi-cell training comparison (H9 ESC) ────────────────────────
+# ── Panel D: multi-cell training delta plot (H9 ESC) ────────────────────────
+# Δ = multi-cell (A549+HeLa.S3+HepG2) AUPRC − A549-only AUPRC; 95% bootstrap CI
 
 t6 <- tribble(
-  ~mark,     ~a549_only, ~multicell,
-  "H3K4me3",  0.114,      0.109,
-  "H3K27ac",  0.140,      0.120,
-  "ATAC",     0.079,      0.079,
+  ~mark,     ~delta,  ~ci_lo,  ~ci_hi,
+  "H3K4me3",  -0.005,  -0.006,  -0.004,
+  "H3K27ac",  -0.020,  -0.023,  -0.017,
+  "ATAC",      0.000,  -0.002,  +0.002,
 ) |>
-  pivot_longer(c(a549_only, multicell), names_to = "training", values_to = "auprc") |>
-  mutate(
-    training = recode(training,
-                      a549_only = "A549 only",
-                      multicell = "Multi-cell\n(A549+HeLa.S3+HepG2)"),
-    training = factor(training, levels = c("A549 only",
-                                           "Multi-cell\n(A549+HeLa.S3+HepG2)")),
-    mark = factor(mark, levels = MARK_LEVELS)
-  )
+  mutate(mark = factor(mark, levels = MARK_LEVELS))
 
-p_d <- ggplot(t6, aes(x = mark, y = auprc, fill = training)) +
-  geom_col(position = position_dodge(width = 0.7), width = 0.6,
-           color = "grey20", linewidth = 0.25) +
-  scale_fill_manual(
-    values = c("A549 only"                       = unname(OI["blue"]),
-               "Multi-cell\n(A549+HeLa.S3+HepG2)" = unname(OI["orange"])),
-    name = NULL
-  ) +
+p_d <- ggplot(t6, aes(x = mark, y = delta, color = mark)) +
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.4,
+             color = "grey60") +
+  geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
+                width = 0.18, linewidth = 0.55) +
+  geom_point(aes(fill = mark), size = 2.5, shape = 21,
+             color = "grey20", stroke = 0.4) +
+  scale_color_manual(values = MARK_COLORS, guide = "none") +
+  scale_fill_manual(values  = MARK_COLORS, guide = "none") +
   scale_y_continuous(
-    name   = "AUPRC (H9 ESC all sites)",
-    limits = c(0, 0.20),
-    breaks = seq(0, 0.2, 0.05),
-    expand = expansion(mult = c(0, 0.05))
+    name   = "AUPRC gain from multi-cell training\n(H9 ESC; multi-cell minus A549-only)",
+    limits = c(-0.028, 0.009),
+    breaks = seq(-0.025, 0.005, 0.005)
   ) +
   scale_x_discrete(name = NULL) +
   theme_nar() +
-  theme(legend.position = "bottom") +
+  theme(
+    legend.position    = "none",
+    plot.tag.position  = c(0, 1),
+    plot.tag           = element_text(face = "bold", size = 9, hjust = 0)
+  ) +
   labs(tag = "D")
 
 # ── Assemble and save ────────────────────────────────────────────────────────

@@ -118,62 +118,94 @@ p_b <- wrap_plots(heatmaps, nrow = 1) +
         legend.key.height = unit(0.25, "cm"),
         legend.key.width  = unit(0.6,  "cm"))
 
-# ── Panel C: row entropy + GGG density ──────────────────────────────────────
+# ── Panel B: row entropy + GGG density (all 3 marks) ────────────────────────
+
+# r(row entropy, GGG density) ranges across the 4 G4+ groups
+ENT_CORR <- c(
+  "H3K4me3" = "r = -0.56 to -0.65",
+  "H3K27ac" = "r = -0.27 to -0.41",
+  "ATAC"    = "r = -0.01 to -0.13"
+)
 
 POS5_GROUPS <- c(
   "A549 G4+ promoter", "A549 G4+ enhancer",
   "HEK293T G4+ promoter", "HEK293T G4+ enhancer"
 )
 
-df_c   <- read_csv("figures/data/fig4c.csv", show_col_types = FALSE) |>
+df_c <- read_csv("figures/data/fig4c.csv", show_col_types = FALSE) |>  # historical name
   filter(group %in% POS5_GROUPS) |>
-  mutate(group = factor(group, levels = names(ATTN_GROUP_COLORS)))
+  mutate(
+    mark  = factor(mark, levels = MARK_LEVELS),
+    group = factor(group, levels = names(ATTN_GROUP_COLORS))
+  )
 
 df_ggg <- read_csv("figures/data/fig4c_ggg.csv", show_col_types = FALSE)
 
-ent_range <- range(df_c$row_entropy)
-ggg_range <- range(df_ggg$ggg_density)
-df_ggg    <- df_ggg |>
+ent_range_global <- range(df_c$row_entropy)
+ggg_range        <- range(df_ggg$ggg_density)
+df_ggg <- df_ggg |>
   mutate(ggg_scaled = (ggg_density - ggg_range[1]) /
            (ggg_range[2] - ggg_range[1]) *
-           diff(ent_range) + ent_range[1])
+           diff(ent_range_global) + ent_range_global[1])
 
-p_c <- ggplot() +
-  geom_ribbon(
-    data = df_ggg,
-    aes(x = position_bp, ymin = ent_range[1], ymax = ggg_scaled),
-    fill = "grey85", alpha = 0.8
-  ) +
-  geom_line(
-    data = df_c,
-    aes(x = position_bp, y = row_entropy, color = group),
-    linewidth = 0.55
-  ) +
-  scale_color_manual(values = ATTN_GROUP_COLORS[POS5_GROUPS], name = NULL) +
-  scale_x_continuous(
-    name = "Position in window (bp)",
-    limits = c(0, 1000), breaks = seq(0, 1000, 250)
-  ) +
-  scale_y_continuous(
-    name   = "Row entropy (nats)",
-    expand = expansion(mult = c(0, 0.05)),
-    sec.axis = sec_axis(
-      ~ (. - ent_range[1]) / diff(ent_range) *
-        diff(ggg_range) + ggg_range[1],
-      name = "GGG density (shaded)"
+make_entropy_panel <- function(mark_name, add_tag = FALSE, show_sec_axis = FALSE) {
+  p <- ggplot() +
+    geom_ribbon(
+      data = df_ggg,
+      aes(x = position_bp, ymin = ent_range_global[1], ymax = ggg_scaled),
+      fill = "grey85", alpha = 0.8
+    ) +
+    geom_line(
+      data = df_c |> filter(mark == mark_name),
+      aes(x = position_bp, y = row_entropy, color = group),
+      linewidth = 0.55
+    ) +
+    annotate("text", x = 990,
+             y = ent_range_global[1] + 0.04 * diff(ent_range_global),
+             label = ENT_CORR[mark_name],
+             hjust = 1, vjust = 0, size = 2.3, color = "grey45",
+             fontface = "italic") +
+    scale_color_manual(values = ATTN_GROUP_COLORS[POS5_GROUPS], name = NULL) +
+    scale_x_continuous(
+      name   = "Position in window (bp)",
+      limits = c(0, 1000), breaks = seq(0, 1000, 250)
+    ) +
+    scale_y_continuous(
+      name     = "Row entropy (nats)",
+      limits   = ent_range_global,
+      expand   = expansion(mult = c(0, 0.05)),
+      sec.axis = if (show_sec_axis) {
+        sec_axis(
+          ~ (. - ent_range_global[1]) / diff(ent_range_global) *
+            diff(ggg_range) + ggg_range[1],
+          name = "GGG density (shaded)"
+        )
+      } else {
+        waiver()
+      }
+    ) +
+    annotate("text", x = 5, y = Inf, label = mark_name,
+             hjust = 0, vjust = 1.3, size = 2.8, fontface = "bold") +
+    theme_nar() +
+    theme(
+      legend.position    = "none",
+      axis.title.y.right = element_text(color = "grey60", size = 8)
     )
-  ) +
-  annotate("text", x = 5, y = Inf, label = "H3K27ac",
-           hjust = 0, vjust = 1.3, size = 2.8, fontface = "bold") +
-  theme_nar() +
-  guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
-  theme(
-    legend.position     = "none",
-    axis.title.y.right  = element_text(color = "grey60", size = 8),
-    plot.tag.position   = c(0, 1),
-    plot.tag            = element_text(face = "bold", size = 9, hjust = 0)
-  ) +
-  labs(tag = "B")
+
+  if (add_tag) {
+    p <- p + labs(tag = "B") +
+      theme(plot.tag.position = c(0, 1),
+            plot.tag          = element_text(face = "bold", size = 9, hjust = 0))
+  }
+  p
+}
+
+p_c_h3k4me3 <- make_entropy_panel("H3K4me3", add_tag = TRUE)
+p_c_h3k27ac <- make_entropy_panel("H3K27ac")
+p_c_atac    <- make_entropy_panel("ATAC", show_sec_axis = TRUE)
+
+p_c <- (p_c_h3k4me3 + p_c_h3k27ac + p_c_atac) &
+  theme(plot.margin = margin(2, 2, 2, 2))
 
 # ── Assemble and save ────────────────────────────────────────────────────────
 
