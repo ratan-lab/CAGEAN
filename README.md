@@ -21,7 +21,7 @@ models/
 data_prep/          Scripts 01–04: raw data → model-ready numpy arrays
 train/              Training scripts and SLURM submission files
 eval/               One evaluation script per paper table/supplementary table
-analysis/           Attention extraction and figure data generation
+analysis/           Attention extraction, ISM, and layer probing for figure data
 figures/            R scripts and CSV data for each manuscript figure
 environment.yml     PyTorch environment (all training and eval)
 environment_tf.yml  TensorFlow environment (epiG4NN baseline only)
@@ -219,19 +219,44 @@ python eval/eval_h9esc.py ...
 
 ### Step 9 — Reproduce figures
 
-After running `analysis/extract_attention.py` to generate numpy attention arrays and
-`analysis/plot_attention.py` to convert them to `figures/data/fig4*.csv`:
+Pre-computed CSV inputs for all figures are already included in `figures/data/`. To
+regenerate them from scratch, run the three analysis scripts first:
+
+```bash
+# Attention entropy arrays → figures/data/fig4*.csv  (Figures 3–4)
+python analysis/extract_attention.py --ckpt checkpoints/cagean_h3k4me3.pt ...
+python analysis/plot_attention.py ...
+
+# Layer probing → figures/data/figS3_probing_{r2,auprc}.csv  (Supp. Fig. S3)
+python analysis/run_probing.py \
+    --ckpt          checkpoints/seqonly_transformer.pt \
+    --a549_test_dir data/a549/test \
+    --pqs_bed       pqs/PQS_unpadded.bed \
+    --pad_bed       pqs/PQS_padded.bed \
+    --out_dir       figures/data
+
+# In silico mutagenesis → figures/data/ism_in_out.csv  (Figure 2D)
+python analysis/run_ism.py \
+    --ckpt          checkpoints/seqonly_transformer.pt \
+    --a549_test_dir data/a549/test \
+    --pqs_bed       pqs/PQS_unpadded.bed \
+    --pad_bed       pqs/PQS_padded.bed \
+    --out_dir       figures/data \
+    --n_ism         1000
+```
+
+Then render all figures from R:
 
 ```r
 # From the project root:
 Rscript figures/fig1.R
-Rscript figures/fig2.R
+Rscript figures/fig2.R    # Panel D requires figures/data/ism_in_out.csv
 Rscript figures/fig3.R
 Rscript figures/fig4.R
 Rscript figures/fig5.R
 Rscript figures/figS1.R
 Rscript figures/figS2.R
-Rscript figures/figS3.R   # concatenation-fusion ablation (Supp. Fig. S3)
+Rscript figures/figS3.R   # Requires figures/data/figS3_probing_{r2,auprc}.csv
 ```
 
 `utils.R` provides the shared theme (`theme_nar()`), colorblind-safe palettes
@@ -249,7 +274,7 @@ historical artifact from an earlier panel numbering and does not indicate Figure
 **T+NZ protocol.** Cross-cell evaluation restricts test chromosomes (chr1, 3, 5, 7, 9)
 to sites with non-zero G4-occupancy signal in the evaluation cell type. For HEK293T and
 K562, where labels are continuous G4P/BG4 signal tracks, this means sites where any
-signal was detected (`labels > 0`). For H9 ESC, where labels are binary BG4 peaks,
+signal was detected (`labels > 0`). For H9 ESC, where labels are binary G4 ChIP-seq peaks,
 `labels > 0` would reduce the evaluation set to G4+ sites only and make AUPRC
 trivial; instead, `eval_h9esc.py` uses the epigenomic coverage mask
 (`{chrom}_covered_{mark}.npy`) to select sites where the mark was detectable, regardless

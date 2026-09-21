@@ -1,65 +1,75 @@
-# Supplementary Figure S3: Concatenation fusion ablation vs CAGEAN
-# Line plot of Δ AUPRC (Concat+Res+InstanceNorm − CAGEAN) across evaluation
-# datasets and epigenomic marks. Positive Δ: ablation outperforms CAGEAN.
-# Negative Δ: CAGEAN outperforms ablation. H1975 H3K4me3 data not available.
+# Supplementary Figure S3: Layerwise representation probing of SeqOnlyTransformer
 #
+# Panel A: Token-level linear probe R² for three sequence features across the
+#   CNN stem and four Transformer layers. Shows that nucleotide composition is
+#   encoded at the input (CNN), while PQS distance is not decodable until
+#   Layer 1 (R² ≈ 0.91).
+# Panel B: Pooled class AUPRC (logistic probe on mean-pooled token embeddings)
+#   across layers. Shows that G4+ vs G4− becomes linearly separable at Layer 3.
+#
+# Data source: analysis/run_probing.py → figures/data/figS3_probing_r2.csv
+#                                         figures/data/figS3_probing_auprc.csv
 # Run from project root: Rscript figures/figS3.R
 
 source("figures/utils.R")
 
-# cagean and concat_res are rounded to 3 d.p. from raw model outputs.
-# delta is independently rounded from the raw difference (Table S12), so
-# concat_res - cagean may differ from delta by ±0.001 in some rows.
-# Only delta is used in the plot.
-dat <- tribble(
-  ~dataset,                    ~mark,     ~cagean, ~concat_res, ~delta,
-  "A549\nsame-cell",           "H3K4me3",  0.886,   0.838,      -0.048,
-  "A549\nsame-cell",           "H3K27ac",  0.888,   0.804,      -0.085,
-  "A549\nsame-cell",           "ATAC",     0.849,   0.788,      -0.062,
-  "HEK293T\ncross-cell",       "H3K4me3",  0.726,   0.698,      -0.028,
-  "HEK293T\ncross-cell",       "H3K27ac",  0.665,   0.630,      -0.035,
-  "HEK293T\ncross-cell",       "ATAC",     0.633,   0.621,      -0.012,
-  "H1975\ncross-cell",         "H3K4me3",  NA,      NA,          NA,
-  "H1975\ncross-cell",         "H3K27ac",  0.616,   0.639,      +0.023,
-  "H1975\ncross-cell",         "ATAC",     0.624,   0.637,      +0.013,
-  "K562 BG4\ncross-technique", "H3K4me3",  0.310,   0.336,      +0.025,
-  "K562 BG4\ncross-technique", "H3K27ac",  0.318,   0.351,      +0.034,
-  "K562 BG4\ncross-technique", "ATAC",     0.294,   0.348,      +0.053,
-) |>
-  mutate(
-    dataset = factor(dataset, levels = unique(dataset)),
-    mark    = factor(mark, levels = MARK_LEVELS)
-  )
+LAYER_LEVELS <- c("CNN", "Layer 1", "Layer 2", "Layer 3", "Layer 4")
 
-p <- ggplot(dat, aes(x = dataset, y = delta,
-                     color = mark, shape = mark, group = mark)) +
-  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.4,
-             color = "grey55") +
-  geom_line(linewidth = 0.5, na.rm = TRUE,
-            position = position_dodge(width = 0.25)) +
-  geom_point(size = 2.2, na.rm = TRUE,
-             position = position_dodge(width = 0.25)) +
-  annotate("text", x = 4.5, y = 0.006,
-           label = "Concatenation fusion better (above)",
-           hjust = 1, vjust = 0, size = 2.5, color = "grey45") +
-  annotate("text", x = 4.5, y = -0.006,
-           label = "Cross-attention (CAGEAN) better (below)",
-           hjust = 1, vjust = 1, size = 2.5, color = "grey45") +
-  scale_color_manual(values = MARK_COLORS, name = NULL) +
+PROBE_COLORS <- c(
+  "dist(PQS)"   = unname(OI["vermil"]),
+  "G fraction"  = unname(OI["blue"]),
+  "GC fraction" = unname(OI["green"])
+)
+
+# ── Panel A: token-level R² ──────────────────────────────────────────────────
+r2_dat <- read_csv("figures/data/figS3_probing_r2.csv", show_col_types = FALSE) |>
+  filter(feature %in% names(PROBE_COLORS)) |>
+  mutate(layer = factor(layer, levels = LAYER_LEVELS))
+
+pA <- ggplot(r2_dat, aes(x = layer, y = score, color = feature,
+                          group = feature, shape = feature)) +
+  geom_hline(yintercept = 0, linetype = "dotted", linewidth = 0.3,
+             color = "grey60") +
+  geom_line(linewidth = 0.6) +
+  geom_point(size = 2.0) +
+  scale_color_manual(values = PROBE_COLORS, name = NULL) +
   scale_shape_manual(
-    values = c(H3K4me3 = 16L, H3K27ac = 17L, ATAC = 15L),
+    values = c("dist(PQS)" = 16L, "G fraction" = 17L, "GC fraction" = 15L),
     name = NULL
   ) +
   scale_x_discrete(name = NULL) +
   scale_y_continuous(
-    name   = "AUPRC (Concat+Res+InstanceNorm minus CAGEAN)",
-    limits = c(-0.095, 0.065),
-    breaks = seq(-0.09, 0.06, 0.03)
+    name   = expression(R^2~"(token-level linear probe)"),
+    limits = c(-0.05, 1.0),
+    breaks = seq(0, 1, 0.2)
   ) +
+  labs(tag = "A") +
   theme_nar() +
-  theme(
-    legend.position = "bottom",
-    legend.key.size = unit(0.35, "cm")
-  )
+  theme(legend.position = "bottom", legend.key.size = unit(0.35, "cm"))
 
-save_fig(p, "figS3", width_cm = 11, height_cm = 8)
+# ── Panel B: pooled class AUPRC ──────────────────────────────────────────────
+auprc_dat <- read_csv("figures/data/figS3_probing_auprc.csv",
+                      show_col_types = FALSE) |>
+  mutate(layer = factor(layer, levels = LAYER_LEVELS))
+
+# positive rate as the random-classifier baseline
+pos_rate <- auprc_dat |> filter(!is.na(pos_rate)) |> pull(pos_rate) |> first()
+
+pB <- ggplot(auprc_dat, aes(x = layer, y = auprc, group = 1)) +
+  geom_hline(yintercept = pos_rate, linetype = "dotted", linewidth = 0.3,
+             color = "grey60") +
+  annotate("text", x = 0.6, y = pos_rate + 0.012,
+           label = "random", size = 2.2, color = "grey50", hjust = 0) +
+  geom_line(linewidth = 0.6, color = OI["blue"]) +
+  geom_point(size = 2.0, color = OI["blue"]) +
+  scale_x_discrete(name = NULL) +
+  scale_y_continuous(
+    name   = "AUPRC (pooled logistic probe)",
+    limits = c(NA, NA)
+  ) +
+  labs(tag = "B") +
+  theme_nar()
+
+p <- pA + pB + plot_layout(widths = c(1.1, 1))
+
+save_fig(p, "figS3", width_cm = 14, height_cm = 7)
