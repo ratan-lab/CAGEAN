@@ -160,10 +160,10 @@ p_d <- ggplot(ism_dat, aes(x = region, y = imp, fill = region, color = region)) 
 # ── Assemble and save ────────────────────────────────────────────────────────
 
 top_row <- p_a + p_b + plot_layout(widths = c(2.2, 1))
-bot_row <- p_c + p_d + plot_layout(widths = c(1, 1.3))
+bot_row <- p_c + p_d + plot_layout(widths = c(1.5, 1))
 
 fig2 <- top_row / bot_row +
-  plot_layout(heights = c(1.3, 1)) &
+  plot_layout(heights = c(1, 1)) &
   theme(plot.tag.position = c(0, 1), plot.tag = element_text(face = "bold", size = 9))
 
 save_fig(fig2, "fig2", width_cm = 17.4, height_cm = 15)
